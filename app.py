@@ -4,29 +4,29 @@ import matplotlib.pyplot as plt
 
 st.title("Appliance Health Monitoring Dashboard")
 
-st.header("Fridge Monitoring")
+st.header("Upload Appliance Data")
 
-fridge = pd.read_csv("fridge_streamlit_results.csv")
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-st.write(fridge)
+if uploaded_file is not None:
 
-fig1, ax1 = plt.subplots()
-ax1.plot(fridge["Reconstruction_Error"])
-ax1.set_title("Fridge Reconstruction Error")
-ax1.set_xlabel("Day")
-ax1.set_ylabel("Error")
-st.pyplot(fig1)
+    df = pd.read_csv(uploaded_file)
 
+    st.subheader("Data Preview")
+    st.write(df)
 
-st.header("AC Monitoring")
+    if "Reconstruction_Error" in df.columns:
 
-ac = pd.read_csv("ac_streamlit_results.csv")
+        st.subheader("Reconstruction Error Graph")
 
-st.write(ac)
+        fig, ax = plt.subplots()
+        ax.plot(df["Reconstruction_Error"])
+        ax.set_xlabel("Day")
+        ax.set_ylabel("Error")
+        ax.set_title("Appliance Reconstruction Error")
 
-fig2, ax2 = plt.subplots()
-ax2.plot(ac["Reconstruction_Error"])
-ax2.set_title("AC Reconstruction Error")
-ax2.set_xlabel("Day")
-ax2.set_ylabel("Error")
-st.pyplot(fig2)
+        st.pyplot(fig)
+
+        if "Risk_Status" in df.columns:
+            st.subheader("Risk Status")
+            st.write(df[["Day","Risk_Status"]])
