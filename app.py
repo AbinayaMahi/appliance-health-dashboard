@@ -36,6 +36,10 @@ if not day_data.empty:
 
     st.metric("Risk Status", status)
     st.metric("Reconstruction Error", round(error,6))
+    if status == "Warning":
+        st.error("Appliance Behavior Warning Detected")
+    else:
+        st.success("Appliance Operating Normally")
 
 else:
     st.write("No data available")
