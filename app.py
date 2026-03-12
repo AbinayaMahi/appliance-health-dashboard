@@ -2,31 +2,54 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-st.title("Appliance Health Monitoring Dashboard")
+st.title("Smart Appliance Behavioral Monitoring Dashboard")
 
-st.header("Upload Appliance Data")
+# Appliance selector
+appliance = st.selectbox(
+    "Select Appliance",
+    ["Refrigerator", "Air Conditioner"]
+)
 
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+# Load dataset
+if appliance == "Refrigerator":
+    df = pd.read_csv("fridge_results.csv")
+else:
+    df = pd.read_csv("ac_results.csv")
 
-if uploaded_file is not None:
+# Day selector
+selected_day = st.slider(
+    "Select Day",
+    int(df["Day"].min()),
+    int(df["Day"].max()),
+    0
+)
 
-    df = pd.read_csv(uploaded_file)
+# Filter selected row
+day_data = df[df["Day"] == selected_day]
 
-    st.subheader("Data Preview")
-    st.write(df)
+st.subheader("Appliance Status")
 
-    if "Reconstruction_Error" in df.columns:
+if not day_data.empty:
 
-        st.subheader("Reconstruction Error Graph")
+    error = day_data["Reconstruction_Error"].values[0]
+    status = day_data["Risk_Status"].values[0]
 
-        fig, ax = plt.subplots()
-        ax.plot(df["Reconstruction_Error"])
-        ax.set_xlabel("Day")
-        ax.set_ylabel("Error")
-        ax.set_title("Appliance Reconstruction Error")
+    st.metric("Risk Status", status)
+    st.metric("Reconstruction Error", round(error,6))
 
-        st.pyplot(fig)
+else:
+    st.write("No data available")
 
-        if "Risk_Status" in df.columns:
-            st.subheader("Risk Status")
-            st.write(df[["Day","Risk_Status"]])
+# Graph
+st.subheader("Behavior Trend")
+
+fig, ax = plt.subplots()
+
+ax.plot(df["Day"], df["Reconstruction_Error"], label="Reconstruction Error")
+
+ax.set_xlabel("Day")
+ax.set_ylabel("Reconstruction Error")
+
+ax.legend()
+
+st.pyplot(fig)
