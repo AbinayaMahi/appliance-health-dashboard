@@ -14,7 +14,7 @@ appliance = st.selectbox(
 if appliance == "Refrigerator":
     df = pd.read_csv("fridge_streamlit_results.csv")
 else:
-    df = pd.read_csv("ac_results.csv")
+    df = pd.read_csv("ac_results (1).csv")
 
 # Check required columns
 required_cols = ["Day","Reconstruction_Error","Risk_Status"]
