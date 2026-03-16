@@ -4,27 +4,34 @@ import matplotlib.pyplot as plt
 
 st.title("Smart Appliance Behavioral Monitoring Dashboard")
 
-# Appliance selector
+# Appliance selection
 appliance = st.selectbox(
     "Select Appliance",
     ["Refrigerator", "Air Conditioner"]
 )
 
-# Load dataset
+# Load correct dataset
 if appliance == "Refrigerator":
-    df = pd.read_csv("fridge_results.csv")
+    df = pd.read_csv("fridge_streamlit_results.csv")
 else:
     df = pd.read_csv("ac_results.csv")
+
+# Check required columns
+required_cols = ["Day","Reconstruction_Error","Risk_Status"]
+for col in required_cols:
+    if col not in df.columns:
+        st.error(f"Missing column: {col}")
+        st.stop()
 
 # Day selector
 selected_day = st.slider(
     "Select Day",
     int(df["Day"].min()),
     int(df["Day"].max()),
-    0
+    int(df["Day"].min())
 )
 
-# Filter selected row
+# Get selected day data
 day_data = df[df["Day"] == selected_day]
 
 st.subheader("Appliance Status")
@@ -36,15 +43,18 @@ if not day_data.empty:
 
     st.metric("Risk Status", status)
     st.metric("Reconstruction Error", round(error,6))
-    if status == "Warning":
-        st.error("Appliance Behavior Warning Detected")
+
+    if status == "High Risk":
+        st.error("High Risk Behavior Detected")
+    elif status == "Warning":
+        st.warning("Appliance Behavior Warning")
     else:
         st.success("Appliance Operating Normally")
 
 else:
     st.write("No data available")
 
-# Graph
+# Trend graph
 st.subheader("Behavior Trend")
 
 fig, ax = plt.subplots()
