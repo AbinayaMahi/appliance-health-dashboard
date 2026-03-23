@@ -1,69 +1,69 @@
+# app.py
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
 
-st.title("Smart Appliance Behavioral Monitoring Dashboard")
+st.set_page_config(page_title="Appliance Health Monitor", layout="wide")
+st.title("Smart Appliance Behavioral Health Dashboard")
 
-# Appliance selection
-appliance = st.selectbox(
-    "Select Appliance",
-    ["Refrigerator", "Air Conditioner"]
-)
+appliance = st.selectbox("Select Appliance", ["Refrigerator", "Air Conditioner"])
+fname = "fridge_results.csv" if appliance == "Refrigerator" else "ac_results.csv"
+df = pd.read_csv(fname)
+df['date'] = pd.to_datetime(df['date'])
 
-# Load correct dataset
-if appliance == "Refrigerator":
-    df = pd.read_csv("fridge_streamlit_results.csv")
-else:
-    df = pd.read_csv("ac_results (1).csv")
+# ── Row 1: gauge + summary metrics ───────────────────────────
+col1, col2, col3, col4 = st.columns(4)
+latest = df.iloc[-1]
 
-# Check required columns
-required_cols = ["Day","Reconstruction_Error","Risk_Status"]
-for col in required_cols:
-    if col not in df.columns:
-        st.error(f"Missing column: {col}")
-        st.stop()
+fig_gauge = go.Figure(go.Indicator(
+    mode="gauge+number",
+    value=float(latest['Health_Score']),
+    gauge={
+        'axis': {'range': [0, 100]},
+        'steps': [
+            {'range': [0,  40], 'color': '#FFCCCC'},
+            {'range': [40, 70], 'color': '#FFF3CC'},
+            {'range': [70,100], 'color': '#CCFFCC'}
+        ],
+        'threshold': {'value': 40, 'line': {'color': 'red', 'width': 3}}
+    },
+    title={'text': "Current Health Score"}
+))
+fig_gauge.update_layout(height=250, margin=dict(t=40,b=10,l=10,r=10))
+col1.plotly_chart(fig_gauge, use_container_width=True)
 
-# Day selector
-selected_day = st.slider(
-    "Select Day",
-    int(df["Day"].min()),
-    int(df["Day"].max()),
-    int(df["Day"].min())
-)
+col2.metric("Risk Status",     latest['Risk_Status'])
+col3.metric("Autoencoder signal", f"{latest['err_norm']*100:.0f}%")
+col4.metric("Trend drift signal", f"{latest['slope_norm']*100:.0f}%")
 
-# Get selected day data
-day_data = df[df["Day"] == selected_day]
+# ── Row 2: 90-day health trend ────────────────────────────────
+st.subheader("Health Score Trend (last 90 days)")
+recent = df.tail(90)
+color_map = {'Normal': 'green', 'Warning': 'orange', 'High Risk': 'red'}
+fig_trend = px.scatter(recent, x='date', y='Health_Score',
+                       color='Risk_Status',
+                       color_discrete_map=color_map)
+fig_trend.add_scatter(x=recent['date'], y=recent['Health_Score'],
+                      mode='lines', line=dict(color='gray', width=1),
+                      showlegend=False)
+fig_trend.update_layout(height=280)
+st.plotly_chart(fig_trend, use_container_width=True)
 
-st.subheader("Appliance Status")
+# ── Row 3: CDI component breakdown ───────────────────────────
+st.subheader("CDI Component Contribution Over Time")
+fig_area = go.Figure()
+fig_area.add_trace(go.Scatter(x=df['date'], y=df['err_norm']*50,
+    fill='tozeroy', name='Autoencoder error (50%)', line=dict(color='#7F77DD')))
+fig_area.add_trace(go.Scatter(x=df['date'], y=df['slope_norm']*30,
+    fill='tozeroy', name='Trend drift (30%)', line=dict(color='#1D9E75')))
+fig_area.add_trace(go.Scatter(x=df['date'], y=df['z_norm']*20,
+    fill='tozeroy', name='Z-deviation (20%)', line=dict(color='#EF9F27')))
+fig_area.update_layout(height=280)
+st.plotly_chart(fig_area, use_container_width=True)
 
-if not day_data.empty:
-
-    error = day_data["Reconstruction_Error"].values[0]
-    status = day_data["Risk_Status"].values[0]
-
-    st.metric("Risk Status", status)
-    st.metric("Reconstruction Error", round(error,6))
-
-    if status == "High Risk":
-        st.error("High Risk Behavior Detected")
-    elif status == "Warning":
-        st.warning("Appliance Behavior Warning")
-    else:
-        st.success("Appliance Operating Normally")
-
-else:
-    st.write("No data available")
-
-# Trend graph
-st.subheader("Behavior Trend")
-
-fig, ax = plt.subplots()
-
-ax.plot(df["Day"], df["Reconstruction_Error"], label="Reconstruction Error")
-
-ax.set_xlabel("Day")
-ax.set_ylabel("Reconstruction Error")
-
-ax.legend()
-
-st.pyplot(fig)
+# ── Row 4: day-by-day table ───────────────────────────────────
+st.subheader("Daily Risk Log")
+st.dataframe(df[['date','Health_Score','Risk_Status',
+                 'Reconstruction_Error']].tail(30).sort_values('date', ascending=False),
+             use_container_width=True)
