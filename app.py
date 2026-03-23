@@ -8,7 +8,7 @@ st.set_page_config(page_title="Appliance Health Monitor", layout="wide")
 st.title("Smart Appliance Behavioral Health Dashboard")
 
 appliance = st.selectbox("Select Appliance", ["Refrigerator", "Air Conditioner"])
-fname = "fridge_results.csv" if appliance == "Refrigerator" else "ac_results.csv"
+fname = "fridge_results.csv" if appliance == "Refrigerator" else "ac_results (2).csv"
 df = pd.read_csv(fname)
 df['date'] = pd.to_datetime(df['date'])
 
